@@ -1,2 +1,2 @@
 # File-Royale
-A battle royale game between inside YOUR file system between your files
+A battle royale game inside YOUR file system between your files
