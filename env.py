@@ -26,12 +26,3 @@ def delete_file(file):
     files = scan_arena()
     zone = files[file]
     os.remove(f"ARENA/{zone}/{file}")
-
-
-def main():
-    print("hi")
-    scan_arena()
-    move_files("gay.pp","Zone_1")
-    delete_file("man.dick")
-if __name__ == "__main__":
-    main()
