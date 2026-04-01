@@ -1,7 +1,8 @@
 from env import setup,group_by_zone,move_files,get_chests_in_zone,remove_chest,spawn_chest
-from agent import initialize_agents,decide_actions,update_memory,level_up
+from agent import initialize_agents,update_memory,level_up
 from combat import process_combat
 import random
+from decision import decide_actions
 
 def main():
     print("Setting up arena...")
@@ -11,6 +12,8 @@ def main():
     storm_zones=set()
     all_zones=[f"Zone_{i}" for i in range(1,10)]
     tick=1
+    for _ in range(3):
+        spawn_chest()
     while True:
         print(f"\n--- Tick {tick} ---")
         if tick==3:
@@ -22,10 +25,9 @@ def main():
             storm_zones.update(random.sample(remaining,4))
             print("Storm expanded to:",storm_zones)
         update_memory(agents)
-        if random.random()<0.3:
-            spawn_chest()
         print("\nDecision Phase")
-        actions=decide_actions(agents)
+        chests=get_chests_in_zone()
+        actions=decide_actions(agents,storm_zones,chests)
         print_actions(actions)
         print("\nMovement Phase")
         process_movement(actions,agents)
@@ -83,7 +85,7 @@ def print_agents(agents):
     for f in agents:
         d=agents[f]
         s="Alive" if d["alive"] else "Dead"
-        print(f"{f} | HP: {d['hp']} | {s}")
+        print(f"{f} | HP: {d['hp']} | {s} | {d['strategy']}")
 
 def print_actions(actions):
     print("\nActions:")
