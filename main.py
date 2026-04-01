@@ -8,9 +8,19 @@ def main():
     setup()
     input("Add files to zones, then press Enter...")
     agents=initialize_agents()
+    storm_zones=set()
+    all_zones=[f"Zone_{i}" for i in range(1,10)]
     tick=1
     while True:
         print(f"\n--- Tick {tick} ---")
+        if tick==3:
+            storm_zones.update(random.sample(all_zones,3))
+            print("Storm expanded to:",storm_zones)
+
+        if tick==8:
+            remaining=[z for z in all_zones if z not in storm_zones]
+            storm_zones.update(random.sample(remaining,4))
+            print("Storm expanded to:",storm_zones)
         update_memory(agents)
         if random.random()<0.3:
             spawn_chest()
@@ -20,6 +30,7 @@ def main():
         print("\nMovement Phase")
         process_movement(actions,agents)
         process_idle(actions,agents)
+        process_storm(agents,storm_zones)
         process_chests(agents)
         print("\nCombat Phase")
         process_combat(agents,actions)
@@ -43,7 +54,7 @@ def process_movement(actions,agents):
             continue
         if act=="move":
             move_files(f,t)
-            agents[f]["hp"]-=5
+            agents[f]["hp"]-=1
 
 def process_idle(actions,agents):
     for f in actions:
@@ -51,7 +62,7 @@ def process_idle(actions,agents):
         if not agents[f]["alive"]:
             continue
         if act=="idle":
-            agents[f]["hp"]-=10
+            agents[f]["hp"]-=2
 
 def process_chests(agents):
     zones=group_by_zone()
@@ -84,6 +95,14 @@ def print_actions(actions):
             print(f"{f} -> moves to {t}")
         else:
             print(f"{f} -> idle")
-
+def process_storm(agents,storm_zones):
+    zones=group_by_zone()
+    for z in zones:
+        if z not in storm_zones:
+            continue
+        for f in zones[z]:
+            if agents[f]["alive"]:
+                agents[f]["hp"]-=10
+                print(f"{f} took storm damage in {z}")
 if __name__=="__main__":
     main()

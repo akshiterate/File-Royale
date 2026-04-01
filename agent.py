@@ -7,7 +7,7 @@ def initialize_agents():
     for f in files:
         agents[f]={
             "hp":100,
-            "atk":20,
+            "atk":5,
             "alive":True,
             "level":1,
             "memory":{
@@ -55,5 +55,5 @@ def decide_actions(agents):
 
 def level_up(agent):
     agent["level"]+=1
-    agent["atk"]+=20
-    agent["hp"]+=40
+    agent["atk"]+=10
+    agent["hp"]+=80
