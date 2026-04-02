@@ -1,7 +1,10 @@
 from env import setup,group_by_zone,move_files,get_chests_in_zone,remove_chest,spawn_chest
-from agent import initialize_agents,decide_actions,update_memory,level_up
+from agent import initialize_agents,update_memory,level_up
 from combat import process_combat
 import random
+from decision import decide_actions
+from visualize import (init_visualizer, close_visualizer, draw,
+                       ev_combat, ev_move, ev_chest, ev_storm, ev_info)
 
 def main():
     print("Setting up arena...")
@@ -11,43 +14,63 @@ def main():
     storm_zones=set()
     all_zones=[f"Zone_{i}" for i in range(1,10)]
     tick=1
-    while True:
-        print(f"\n--- Tick {tick} ---")
-        if tick==3:
-            storm_zones.update(random.sample(all_zones,3))
-            print("Storm expanded to:",storm_zones)
+    for _ in range(3):
+        spawn_chest()
 
-        if tick==8:
-            remaining=[z for z in all_zones if z not in storm_zones]
-            storm_zones.update(random.sample(remaining,4))
-            print("Storm expanded to:",storm_zones)
-        update_memory(agents)
-        if random.random()<0.3:
-            spawn_chest()
-        print("\nDecision Phase")
-        actions=decide_actions(agents)
-        print_actions(actions)
-        print("\nMovement Phase")
-        process_movement(actions,agents)
-        process_idle(actions,agents)
-        process_storm(agents,storm_zones)
-        process_chests(agents)
-        print("\nCombat Phase")
-        process_combat(agents,actions)
-        print("\nAgent States")
-        print_agents(agents)
-        alive=[a for a in agents if agents[a]["alive"]]
-        if len(alive)<=1:
-            print("\nGame Over")
-            if len(alive)==1:
-                print("Winner:",alive[0])
-            else:
-                print("No winner (all agents died)")
-            break
-        tick+=1
-        input("\nPress Enter for next tick...")
+    init_visualizer()                                           # <-- viz: start curses
 
-def process_movement(actions,agents):
+    try:
+        while True:
+            events = []                                         # <-- viz: collect events each tick
+            if tick==3:
+                storm_zones.update(random.sample(all_zones,3))
+                events.append(ev_storm(f"Storm expanded: {sorted(storm_zones)}"))
+
+            if tick==8:
+                remaining=[z for z in all_zones if z not in storm_zones]
+                storm_zones.update(random.sample(remaining,4))
+                events.append(ev_storm(f"Storm expanded: {sorted(storm_zones)}"))
+
+            update_memory(agents)
+            chests=get_chests_in_zone()
+            actions=decide_actions(agents,storm_zones,chests)
+
+            for f in actions:                                   # <-- viz: log actions
+                act,t=actions[f]
+                if act=="attack":
+                    events.append(ev_combat(f"T{tick} {f} attacks {t}"))
+                elif act=="move":
+                    events.append(ev_move(f"T{tick} {f} -> {t}"))
+                else:
+                    events.append(ev_info(f"T{tick} {f} idle"))
+
+            process_movement(actions,agents,events)             # <-- viz: pass events
+            process_idle(actions,agents)
+            process_storm(agents,storm_zones,events)            # <-- viz: pass events
+            process_chests(agents,events)                       # <-- viz: pass events
+            process_combat(agents,actions)
+
+            alive=[a for a in agents if agents[a]["alive"]]
+
+            draw(tick, agents, actions, storm_zones, chests, events)  # <-- viz: render
+
+            if len(alive)<=1:
+                close_visualizer()                              # <-- viz: restore terminal
+                print("\nGame Over")
+                if len(alive)==1:
+                    print("Winner:",alive[0])
+                else:
+                    print("No winner (all agents died)")
+                break
+            tick+=1
+            input()                                             # <-- viz: Enter advances tick (no prompt, curses owns screen)
+
+    except KeyboardInterrupt:
+        close_visualizer()                                      # <-- viz: clean up on Ctrl+C
+
+# ── helpers below: only change is an optional `events` param ─────────
+
+def process_movement(actions, agents, events=None):
     for f in actions:
         act,t=actions[f]
         if not agents[f]["alive"]:
@@ -64,7 +87,7 @@ def process_idle(actions,agents):
         if act=="idle":
             agents[f]["hp"]-=2
 
-def process_chests(agents):
+def process_chests(agents, events=None):
     zones=group_by_zone()
     chests=get_chests_in_zone()
     for z in zones:
@@ -74,7 +97,8 @@ def process_chests(agents):
         if len(alive)==1:
             f=alive[0]
             c=chests[z][0]
-            print(f"{f} opened {c} in {z}")
+            if events is not None:
+                events.append(ev_chest(f"{f} opened {c} in {z}"))
             level_up(agents[f])
             remove_chest(z,c)
 
@@ -83,7 +107,7 @@ def print_agents(agents):
     for f in agents:
         d=agents[f]
         s="Alive" if d["alive"] else "Dead"
-        print(f"{f} | HP: {d['hp']} | {s}")
+        print(f"{f} | HP: {d['hp']} | {s} | {d['strategy']}")
 
 def print_actions(actions):
     print("\nActions:")
@@ -95,7 +119,8 @@ def print_actions(actions):
             print(f"{f} -> moves to {t}")
         else:
             print(f"{f} -> idle")
-def process_storm(agents,storm_zones):
+
+def process_storm(agents, storm_zones, events=None):
     zones=group_by_zone()
     for z in zones:
         if z not in storm_zones:
@@ -103,6 +128,8 @@ def process_storm(agents,storm_zones):
         for f in zones[z]:
             if agents[f]["alive"]:
                 agents[f]["hp"]-=10
-                print(f"{f} took storm damage in {z}")
+                if events is not None:
+                    events.append(ev_storm(f"{f} storm dmg in {z}"))
+
 if __name__=="__main__":
     main()

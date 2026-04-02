@@ -6,14 +6,16 @@ def initialize_agents():
     agents={}
     for f in files:
         agents[f]={
-            "hp":100,
-            "atk":5,
+            "hp":random.randint(90,150),
+            "atk":random.randint(3,8),
             "alive":True,
             "level":1,
+            "strategy": random.choice(["simple","greedy","heuristic","hybrid"]),
             "memory":{
                 "zones_visited":set(),
                 "agents_seen":set(),
-                "agents_levels":{}
+                "agents_levels":{},
+                "agents_hp": {}
             }
         }
     return agents
@@ -30,30 +32,9 @@ def update_memory(agents):
                 if o!=f:
                     agents[f]["memory"]["agents_seen"].add(o)
                     agents[f]["memory"]["agents_levels"][o]=agents[o]["level"]
-
-def decide_actions(agents):
-    zones=group_by_zone()
-    actions={}
-    for f in agents:
-        if not agents[f]["alive"]:
-            continue
-        zone=None
-        for z in zones:
-            if f in zones[z]:
-                zone=z
-                break
-        if zone is None:
-            actions[f]=("idle",None)
-            continue
-        targets=[x for x in zones[zone] if x!=f and agents[x]["alive"]]
-        if targets:
-            actions[f]=("attack",random.choice(targets))
-        else:
-            possible=[f"Zone_{i}" for i in range(1,10) if f"Zone_{i}"!=zone]
-            actions[f]=("move",random.choice(possible))
-    return actions
+                    agents[f]["memory"]["agents_hp"][o]=agents[o]["hp"]
 
 def level_up(agent):
     agent["level"]+=1
     agent["atk"]+=10
-    agent["hp"]+=80
+    agent["hp"]+=50

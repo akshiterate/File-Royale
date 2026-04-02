@@ -23,8 +23,6 @@ def scan_arena():
 def move_files(file,new_zone):
     files=scan_arena()
     zone=files[file]
-    print(f"FROM: ARENA/{zone}/{file}")
-    print(f"TO:   ARENA/{new_zone}/{file}")
     shutil.move(f"ARENA/{zone}/{file}",f"ARENA/{new_zone}/{file}")
 
 def delete_file(file):
