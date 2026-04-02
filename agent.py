@@ -37,4 +37,4 @@ def update_memory(agents):
 def level_up(agent):
     agent["level"]+=1
     agent["atk"]+=10
-    agent["hp"]+=80
+    agent["hp"]+=50
